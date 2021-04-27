@@ -138,6 +138,19 @@ class Random(commands.Cog):
             await ctx.author.add_roles(role)
             await ctx.send('NSFW channels have been hidden. :ok_hand:\nDo the same command to unhide the NSFW channels.')
 
+    @commands.command()
+    async def raw(self, ctx, messageid: int, channel: discord.TextChannel=None):
+        """Shows the raw unformatted content of a message."""
+        if not channel:
+            channel = ctx.channel
+
+        try:
+            msg = await channel.fetch_message(messageid)
+        except discord.NotFound:
+            return await ctx.send('Message not found')
+        finally:
+            await ctx.send(f'`{msg.author}` said:\n```{msg.content}```')
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         """Autorole"""
