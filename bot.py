@@ -1,6 +1,5 @@
 import discord
 import os
-import contextlib
 import motor.motor_asyncio
 from pathlib import Path
 from datetime import datetime
