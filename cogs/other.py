@@ -37,7 +37,7 @@ class Random(commands.Cog):
     @commands.command()
     async def source(self, ctx):
         """Gets the source code for this bot on GitHub."""
-        await ctx.send('https://github.com/acatiadroid/util-bot')
+        await ctx.send('Utilities#2289 source code: <https://github.com/acatiadroid/util-bot>')
 
     @commands.command()
     async def addbot(self, ctx, *, content):
