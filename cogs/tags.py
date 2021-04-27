@@ -42,7 +42,7 @@ class Tags(commands.Cog):
                     "_id": str(tagname),
                     "content": str(content),
                     "createdAt": str(datetime.utcnow()),
-                    "createdBy": str(ctx.author),
+                    "createdBy": ctx.author.id,
                     "guild": ctx.guild.id,
                 }
             )
@@ -78,7 +78,7 @@ class Tags(commands.Cog):
         if not data:
             return await ctx.send('Unable to find a tag with that name.')
         
-        if data["createdBy"] != ctx.author:
+        if data["createdBy"] != ctx.author or data["createdBy"] != ctx.author.id:
             if modrole not in ctx.author.roles:
                 return await ctx.send('You can\'t do this to tags that you don\'t own.')
         
@@ -86,7 +86,7 @@ class Tags(commands.Cog):
             if data["delInvoke"] == True:
                 await self.bot.tags.upsert({"_id": str(tagname), "delInvoke": False})
         else:
-            await self.bot.tags.upsert({"_id":str(tagname), "delInvoke": True})
+            await self.bot.tags.upsert({"_id": str(tagname), "delInvoke": True})
 
         await ctx.send(f'The message invocation to **{tagname}** will now be deleted. :ok_hand:')
 
@@ -116,16 +116,33 @@ class Tags(commands.Cog):
             color = discord.Color.blue()
         )
         await ctx.send(embed=e)
+
+    @tag.command(name='edit', aliases=['e'])
+    async def _edit(self, ctx, tagname, *, content):
+        """Edits the content of a tag.
+
+        You can use ?tag raw to get the raw content of an existing tag.
+        """
+        data = await self.bot.tags.find(tagname)
+        if not data:
+            return await ctx.send('Unable to find a tag with that name.')
+
+        modrole = ctx.guild.get_role(723237557193670742)
+
+        if data["createdBy"] != ctx.author or data["createdBy"] != ctx.author.id and modrole not in ctx.author.roles:
+            return await ctx.send('You don\'t own this tag.')
+
+        await self.bot.tags.upsert({"_id": tagname, "content": str(content)})
+        await ctx.send(f'**{tagname}** successfully edited. :ok_hand:')
+
     
     @tag.command(name = 'block')
+    @commands.has_role('Moderator')
     async def _block(self, ctx, *, member:discord.Member):
-        modrole = ctx.guild.get_role('Moderator')
-        if modrole not in ctx.author.roles:
-            return await ctx.send('You can\'t do this.')
-
         role = ctx.guild.get_role(815313621835841587)
         if role in member.roles:
-            return await ctx.send('They\'re already blocked from making tags.')
+            await member.remove_roles(role)
+            return await ctx.send('Unblocked.')
         try:
             await member.add_roles(815313621835841587)
         except Exception as e:
@@ -133,11 +150,12 @@ class Tags(commands.Cog):
 
     @tag.command(name='raw')
     async def _raw(self, ctx, *, tagname):
+        """Gets the raw content of a message. This is useful for editing tags."""
         data = await self.bot.tags.find(tagname)
         if not data:
             return await ctx.send('Unable to find a tag with that name.')
         
-        await ctx.send(embed=discord.Embed(description = f'```{data["content"]}```'))
+        await ctx.send(f"```{data['content']}```")
 
     @tag.error
     async def tag_error(self, ctx, error):
