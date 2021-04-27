@@ -2,7 +2,6 @@ import discord
 import os
 import motor.motor_asyncio
 from pathlib import Path
-from datetime import datetime
 from discord.ext import commands
 
 import utils.json_loader
