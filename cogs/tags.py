@@ -85,7 +85,7 @@ class Tags(commands.Cog):
         
         if "delInvoke" in data:
             if data["delInvoke"] == True:
-                await sel.bot.tags.upsert({"_id": str(tagname), "delInvoke": False})
+                await self.bot.tags.upsert({"_id": str(tagname), "delInvoke": False})
         else:
             await self.bot.tags.upsert({"_id":str(tagname), "delInvoke": True})
 
