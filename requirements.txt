@@ -2,4 +2,3 @@ discord.py
 motor
 requests
 dnspython
-pycorona
