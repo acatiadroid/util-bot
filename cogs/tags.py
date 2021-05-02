@@ -41,7 +41,7 @@ class Tags(commands.Cog):
             tagname = tagname.lower()
             note = "(the tag has been created all in lowercase.)"
         else:
-            note = None
+            note = ""
         try:
             await self.bot.tags.upsert(
                 {
