@@ -2,3 +2,6 @@ discord.py
 motor
 requests
 dnspython
+psutil
+python-dateutil
+timeago
