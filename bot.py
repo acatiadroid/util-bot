@@ -3,27 +3,25 @@ import os
 import motor.motor_asyncio
 from pathlib import Path
 from discord.ext import commands
-
-import utils.json_loader
+from utils.secrets import TOKEN, MONGO_URI, PREFIX
 from utils.mongo import Document
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=commands.when_mentioned_or('?'), case_insensitive=True, intents=intents)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(
+    PREFIX), case_insensitive=True, intents=intents)
 
 bot.help_command = commands.MinimalHelpCommand()
 
 cwd = Path(__file__).parents[0]
 cwd = str(cwd)
 bot.cwd = cwd
-secret_file = utils.json_loader.read_json("secrets")
-bot.config_token = secret_file["token"]
-bot.connection_url = secret_file["mongo"]
+bot.connection_url = MONGO_URI
 
 
 @bot.event
 async def on_ready():
     await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.watching, name="?help • ISgood Development"))
+        activity=discord.Activity(type=discord.ActivityType.watching, name="anyone create tags!"))
     print("Bot is ready.")
 
 
@@ -75,11 +73,9 @@ if __name__ == "__main__":
     bot.botstatus = Document(bot.db, "botstatus")
     bot.counter = Document(bot.db, "counter")
     bot.uptime = Document(bot.db, "uptime")
-    bot.stickymute = Document(bot.db, "stickymute")
+    bot.reminders = Document(bot.db, "reminders")
+    bot.selfmute = Document(bot.db, "selfmute")
     for file in os.listdir(cwd + "/cogs"):
         if file.endswith(".py") and not file.startswith("_"):
             bot.load_extension(f'cogs.{file[:-3]}')
-    bot.run(bot.config_token)
-
-
-
+    bot.run(TOKEN)
