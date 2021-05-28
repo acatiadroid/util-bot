@@ -5,8 +5,8 @@
 # The symbol used at the start of every command to trigger the bot. Note that mentioning the bot as a prefix also works.
 PREFIX = "?"
 
-# Secrets
-TOKEN = 'Bot token here'  # Your bots token
+# Your bots token
+TOKEN = 'Bot token here'
 
 # Database connection URI
 MONGO_URI = 'MongoDB connection URI here'
