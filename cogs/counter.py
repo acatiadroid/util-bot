@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
 
+from utils.secrets import GUILD_ID
+
 class Counter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.channel.id != 818928333651050537:
+        if message.channel.id != GUILD_ID:
             return
 
         try:
@@ -17,7 +19,9 @@ class Counter(commands.Cog):
             await message.delete()
 
 
-        data = await self.bot.counter.find(723237557009252404)
+        data = await self.bot.counter.find(GUILD_ID)
+        if not data:
+            await self.bot.counter.upsert({"_id": GUILD_ID, "count": 1})
 
         calc = data["count"] + 1
 
@@ -28,7 +32,7 @@ class Counter(commands.Cog):
 
         await self.bot.counter.upsert(
             {
-                "_id": 723237557009252404,
+                "_id": GUILD_ID,
                 "count": currentnumber
             }
         )
@@ -36,9 +40,9 @@ class Counter(commands.Cog):
 
     @commands.command()
     async def count(self, ctx):
-        data = await self.bot.counter.get_all()
+        data = await self.bot.counter.find(GUILD_ID)
 
-        await ctx.send(f'We are currently at `{[str(d.get("count")) for d in data]}`')
+        await ctx.send(f'We are currently at {data["count"]}')
 
     @commands.command()
     @commands.has_role('Moderator')

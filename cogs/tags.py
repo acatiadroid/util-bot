@@ -1,6 +1,7 @@
 import discord
 from datetime import datetime
 from discord.ext import commands
+from utils.secrets import TAG_BLACKLIST_ROLE, MOD_ROLE_NAME, MOD_ROLE_ID
 
 
 class Tags(commands.Cog):
@@ -29,7 +30,7 @@ class Tags(commands.Cog):
     @tag.command(aliases=['+'])
     async def create(self, ctx, tagname: commands.clean_content, *, content: commands.clean_content):
         """Creates a new tag."""
-        notag = discord.utils.get(ctx.guild.roles, name='No Tags')
+        notag = discord.utils.get(ctx.guild.roles, id=TAG_BLACKLIST_ROLE)
         if notag in ctx.author.roles:
             return await ctx.send('You can\'t do this.')
 
@@ -52,7 +53,7 @@ class Tags(commands.Cog):
                     "guild": ctx.guild.id,
                 }
             )
-            await ctx.send(f'**{tagname}** successfully created. :ok_hand: {note}', allowed_mentions=None)
+            await ctx.send(f':ok_hand: **{tagname}** successfully created. {note}', allowed_mentions=None)
 
         except Exception as e:
             return await ctx.send('Failed to create that tag. ```{}```'.format(e))
@@ -61,7 +62,7 @@ class Tags(commands.Cog):
     async def delete(self, ctx, *, tagname: commands.clean_content):
         """Deletes a tag. You must be the tag creator or a moderator to delete tags."""
         data = await self.bot.tags.find(tagname)
-        mrole = discord.utils.get(ctx.guild.roles, name='Moderator')
+        mrole = discord.utils.get(ctx.guild.roles, id=MOD_ROLE_ID)
         if not data:
             return await ctx.send('Unable to find a tag with that name.')
 
@@ -74,13 +75,13 @@ class Tags(commands.Cog):
 
         await self.bot.tags.delete_by_id(tagname)
 
-        await ctx.send(f'**{tagname}** successfully deleted. :ok_hand:', allowed_mentions=None)
+        await ctx.send(f':ok_hand: **{tagname}** successfully deleted.', allowed_mentions=None)
 
     @tag.command(aliases=['delinvoke', 'di'])
     async def delete_invoke(self, ctx, *, tagname: commands.clean_content):
         """Toggles deleting the invocation of a certain tag. You must either be the tag creator or a moderator to do this."""
         data = await self.bot.tags.find(tagname)
-        modrole = discord.utils.get(ctx.guild.roles, name='Moderator')
+        modrole = discord.utils.get(ctx.guild.roles, id=MOD_ROLE_ID)
         if not data:
             return await ctx.send('Unable to find a tag with that name.')
 
@@ -94,7 +95,7 @@ class Tags(commands.Cog):
         else:
             await self.bot.tags.upsert({"_id": str(tagname), "delInvoke": True})
 
-        await ctx.send(f'The message invocation to **{tagname}** will now be deleted. :ok_hand:')
+        await ctx.send(f':ok_hand: The message invocation to **{tagname}** will now be deleted.')
 
     @tag.command(aliases=['i'])
     async def info(self, ctx, *, tagname: commands.clean_content):
@@ -133,7 +134,7 @@ class Tags(commands.Cog):
         if not data:
             return await ctx.send('Unable to find a tag with that name.')
 
-        modrole = ctx.guild.get_role(723237557193670742)
+        modrole = ctx.guild.get_role(MOD_ROLE_ID)
 
         if modrole not in ctx.author.roles:
             if data["createdBy"] != ctx.author:
@@ -141,17 +142,17 @@ class Tags(commands.Cog):
                     return await ctx.send('You don\'t own this tag.')
 
         await self.bot.tags.upsert({"_id": tagname, "content": str(content)})
-        await ctx.send(f'**{tagname}** successfully edited. :ok_hand:')
+        await ctx.send(f':ok_hand: **{tagname}** successfully edited.')
 
     @tag.command(name='block')
-    @commands.has_role('Moderator')
+    @commands.has_role(MOD_ROLE_NAME)
     async def _block(self, ctx, *, member: discord.Member):
-        role = ctx.guild.get_role(815313621835841587)
+        role = ctx.guild.get_role(TAG_BLACKLIST_ROLE)
         if role in member.roles:
             await member.remove_roles(role)
             return await ctx.send('Unblocked.')
         try:
-            await member.add_roles(815313621835841587)
+            await member.add_roles(TAG_BLACKLIST_ROLE)
         except Exception as e:
             await ctx.send('Can\'t do that. ```{e}```'.format(e))
 

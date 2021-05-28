@@ -2,6 +2,8 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 
+from utils.secrets import BOT_STATUS_CHANNEL, GUILD_ID
+
 class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -13,12 +15,12 @@ class Activity(commands.Cog):
 
         aadata = await self.bot.botactivity.find(before.id)
         
-        if before.guild.id != 723237557009252404:
+        if before.guild.id != GUILD_ID:
             return
 
         x = ["online", "dnd", "idle"]
 
-        logchannel = discord.utils.get(before.guild.channels, id = 817119214321139733)
+        logchannel = discord.utils.get(before.guild.channels, id = BOT_STATUS_CHANNEL)
         if str(before.status) in x and str(after.status) == "offline":
             await self.bot.botstatus.upsert({"_id":before.id, "down":datetime.utcnow()})
             if aadata:
