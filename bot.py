@@ -16,6 +16,7 @@ cwd = Path(__file__).parents[0]
 cwd = str(cwd)
 bot.cwd = cwd
 bot.connection_url = MONGO_URI
+bot.muted_users = {}
 
 
 @bot.event
