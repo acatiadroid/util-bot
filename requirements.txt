@@ -5,3 +5,4 @@ dnspython
 psutil
 python-dateutil
 timeago
+parsedatetime
