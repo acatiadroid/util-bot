@@ -30,6 +30,7 @@ class TimeConverter(commands.Converter):
                 raise commands.BadArgument(f"{key} is not a number!")
         return round(time)
 
+
 class Random(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -38,14 +39,14 @@ class Random(commands.Cog):
     async def on_ready(self):
         pass
 
-
     @tasks.loop(seconds=3)
     async def check_reminders(self):
         currentTime = datetime.datetime.now()
         reminders = deepcopy(self.bot.reminders)
         for key, value in reminders.items():
 
-            reminderTime = value['setAt'] + relativedelta(seconds=value['duration'])
+            reminderTime = value['setAt'] + \
+                relativedelta(seconds=value['duration'])
 
             if currentTime >= reminderTime:
                 guild = self.bot.get_guild(GUILD_ID)
@@ -61,7 +62,8 @@ class Random(commands.Cog):
         selfmutes = deepcopy(self.bot.selfmute)
         for key, value in selfmutes.items():
 
-            muteTime = value['setAt'] + relativedelta(seconds=value['duration'])
+            muteTime = value['setAt'] + \
+                relativedelta(seconds=value['duration'])
 
             if currentTime >= muteTime:
                 guild = self.bot.get_guild(GUILD_ID)
@@ -135,7 +137,7 @@ class Random(commands.Cog):
             print(e)
 
     @commands.command()
-    async def afk(self, ctx, *, note: commands.clean_content=None):
+    async def afk(self, ctx, *, note: commands.clean_content = None):
         """Marks you as AFK, so when you get mentioned, it will inform the user that you're AFK."""
         if note == None:
             note = 'No note set.'
@@ -281,10 +283,12 @@ class Random(commands.Cog):
     async def cat(self, ctx):
         """Sends images and GIFs of cats"""
         try:
-            api = requests.get('https://api.thecatapi.com/v1/images/search').json()
+            api = requests.get(
+                'https://api.thecatapi.com/v1/images/search').json()
             await ctx.send(api[0]["url"])
         except Exception as e:
             print(e)
+
     @commands.command()
     async def dog(self, ctx):
         """Sends images and GIFs of dogs"""
@@ -321,6 +325,7 @@ class Random(commands.Cog):
         """Bans a member. Mod-only of course."""
         await member.ban(reason=f'Banned by {ctx.author}: {reason}')
         await ctx.send(':ok_hand:')
+
 
 def setup(bot):
     bot.add_cog(Random(bot))
