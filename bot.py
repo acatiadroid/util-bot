@@ -8,7 +8,7 @@ from utils.mongo import Document
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(
-    PREFIX), case_insensitive=True, intents=intents)
+    PREFIX), case_insensitive=True, intents=intents, allowed_mentions=discord.AllowedMentions(users=False, everyone=False, roles=False, replied_user=True))
 
 bot.help_command = commands.MinimalHelpCommand()
 
