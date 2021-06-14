@@ -3,7 +3,6 @@ from discord.ext import commands
 
 from utils.secrets import GUILD_ID, COUNTING_CHANNEL
 
-
 class Counter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -12,8 +11,6 @@ class Counter(commands.Cog):
     async def on_message(self, message):
         if message.channel.id != COUNTING_CHANNEL:
             return
-
-        print('1')
 
         try:
             message.content.isdecimal()
