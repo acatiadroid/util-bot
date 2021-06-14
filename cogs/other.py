@@ -1,138 +1,100 @@
 import discord
 import requests
-import re
 import datetime
 import asyncio
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta
 from copy import deepcopy
 from discord.ext import commands, tasks
 
+from utils import time
 from utils.secrets import MUTE_ROLE_ID, GUILD_ID, ADDBOT_BLACKLIST_ROLE, ADMIN_CHANNEL, HIDE_NSFW_ROLE_ID, MOD_ROLE_NAME
-
-time_regex = re.compile("(?:(\d{1,5})(h|s|m|d))+?")
-time_dict = {"h": 3600, "s": 1, "m": 60, "d": 86400}
-
-
-class TimeConverter(commands.Converter):
-    async def convert(self, ctx, argument):
-        args = argument.lower()
-        matches = re.findall(time_regex, args)
-        time = 0
-        for key, value in matches:
-            try:
-                time += time_dict[value] * float(key)
-            except KeyError:
-                raise commands.BadArgument(
-                    f"{value} is an invalid time key! h|m|s|d are valid arguments"
-                )
-            except ValueError:
-                raise commands.BadArgument(f"{key} is not a number!")
-        return round(time)
 
 
 class Random(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.mute_task = self.check_selfmutes.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
         pass
 
-    @tasks.loop(seconds=3)
-    async def check_reminders(self):
-        currentTime = datetime.datetime.now()
-        reminders = deepcopy(self.bot.reminders)
-        for key, value in reminders.items():
-
-            reminderTime = value['setAt'] + \
-                relativedelta(seconds=value['duration'])
-
-            if currentTime >= reminderTime:
-                guild = self.bot.get_guild(GUILD_ID)
-                channel = guild.get_channel(value['channelId'])
-                message = channel.fetch_message(value['messageId'])
-
-                await message.reply(f'This is a reminder for **{value["reason"]}**.')
-                await self.bot.reminders.delete(value["_id"])
-
-    @tasks.loop(seconds=30)
+    @tasks.loop(seconds=5)
     async def check_selfmutes(self):
-        currentTime = datetime.datetime.now()
-        selfmutes = deepcopy(self.bot.selfmute)
-        for key, value in selfmutes.items():
+        try:
+            currentTime = datetime.datetime.utcnow()
+            selfmutes = deepcopy(self.bot.muted_users)
+            for key, value in selfmutes.items():
 
-            muteTime = value['setAt'] + \
-                relativedelta(seconds=value['duration'])
+                muteTime = value["duration"]
 
-            if currentTime >= muteTime:
-                guild = self.bot.get_guild(GUILD_ID)
-                member = guild.get_member(value["_id"])
-                role = await guild.get_role(MUTE_ROLE_ID)
-                if role not in member.roles:
-                    return
+                if currentTime >= muteTime:
+                    guild = self.bot.get_guild(GUILD_ID)
+                    member = guild.get_member(key)
+                    role = guild.get_role(MUTE_ROLE_ID)
+                    if role not in member.roles:
+                        await self.bot.selfmute.delete(member.id)
+                        self.bot.muted_users.pop(member.id)
+                        return
 
-                await member.remove_roles(role)
+                    await member.remove_roles(role)
+                    print('Unmuted {}'.format(member.name))
 
-                await self.bot.selfmute.delete(member.id)
+                    await self.bot.selfmute.delete(member.id)
+                    self.bot.muted_users.pop(member.id)
+        except Exception as e:
+            print(e)
 
-    @commands.command(aliases=['rm', 'reminder'])
-    async def remind(self, ctx, time: TimeConverter, reason: commands.clean_content = None):
-        if reason == None:
-            reason = 'something'
-
-        await self.bot.reminders.upsert(
-            {
-                "_id": ctx.author.id,
-                "duration": time,
-                "setAt": datetime.datetime.now(),
-                "messageId": ctx.message.id,
-                "channelId": ctx.channel.id,
-                "reason": str(reason)
-            }
-        )
-
-        length = "{}".format(str(timedelta(seconds=time)))
-
-        await ctx.send(f':ok_hand: Alright, I\'ll remind you in {length} for **{reason}**')
-
-        if time < 300:
-            await asyncio.sleep(time)
-
-            await ctx.message.reply(f'This is a reminder for **{reason}**.')
-
-            await self.bot.reminders.delete(ctx.author.id)
+    @check_selfmutes.before_loop
+    async def before_check_current_mutes(self):
+        await self.bot.wait_until_ready()
 
     @commands.command()
-    async def selfmute(self, ctx, time: TimeConverter):
-        """Lets you mute yourself for a set duration of time. Cannot be longer than 24 hours. Do not ask mods to unmute you."""
-
-        if time > 86400:
-            return await ctx.send('Cannot be longer than 24 hours.')
-
-        if time < 300:
-            return await ctx.send('Cannot be shorter than 5 minutes.')
-
-        await self.bot.selfmute.upsert(
-            {
-                "_id": ctx.author.id,
-                "duration": time,
-                "setAt": datetime.datetime.now()
-            }
-        )
+    async def selfmute(self, ctx, duration: time.ShortTime):
+        """Lets you mute yourself for a set duration of time. Cannot be longer than 24 hours and shorter than 5 minutes. Do not ask mods to unmute you."""
         try:
+
+            msg = await ctx.send('**Are you sure you want to be muted?**\n\nPlease do not ask moderators to unmute you. React in 20 seconds.')
+            await msg.add_reaction("✅")
+            await msg.add_reaction("❎")
+
+            try:
+                reaction, member = await self.bot.wait_for(
+                    "reaction_add",
+                    timeout=20,
+                    check=lambda reaction, user: user == ctx.author
+                    and reaction.message.channel == ctx.channel
+                )
+
+            except asyncio.TimeoutError:
+                await ctx.message.reply('You took too long. Cancelled prompt.')
+                await msg.delete()
+                return
+
+            if str(reaction.emoji) not in ["✅", "❎"] or str(reaction.emoji) == "❎":
+                return await msg.delete()
+
+            await msg.delete()
+
+            if duration.dt > (ctx.message.created_at + datetime.timedelta(days=1)):
+                return await ctx.send('Must be shorter than 24 hours.')
+
+            if duration.dt < (ctx.message.created_at + datetime.timedelta(minutes=5)):
+                return await ctx.send('Must be longer than 5 minutes.')
+
+            data = {"_id": ctx.author.id,
+                    "duration": duration.dt}
+
+            self.bot.muted_users[ctx.author.id] = data
+            await self.bot.selfmute.upsert(data)
+
             muterole = ctx.guild.get_role(MUTE_ROLE_ID)
+
             await ctx.author.add_roles(muterole, reason='Self-mute')
-            length = "{}".format(str(timedelta(seconds=time)))
-            await ctx.send(
-                f':ok_hand: Muted for **{length}**. Be sure not to bother anyone about it.')
-            await ctx.author.send('You have muted yourself. Please do not contact mods to unmute you.')
 
-            if time < 300:
-                await asyncio.sleep(time)
-                await ctx.author.remove_roles(muterole, reason='Self-mute expired.')
-                await self.bot.selfmute.delete(ctx.author.id)
+            delta = time.human_timedelta(
+                duration.dt, source=ctx.message.created_at)
 
+            await ctx.message.reply(f':ok_hand: Muted for **{delta}**. Be sure not to bother anyone about it.', allowed_mentions=discord.AllowedMentions(replied_user=False))
         except Exception as e:
             print(e)
 
